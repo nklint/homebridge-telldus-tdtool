@@ -1,9 +1,9 @@
 'use strict'
 
 // Convert 0-255 to 0-100
-const bitsToPercentage = value => Math.round(value * 100 / 255)
+const bitsToPercentage = value => Math.round((value * 100) / 255)
 // Convert 0-100 to 0-255
-const percentageToBits = value => Math.round(value * 255 / 100)
+const percentageToBits = value => Math.round((value * 255) / 100)
 // Default max age for sensors
 const SENSOR_MAX_AGE_SECONDS = 60 * 60
 
@@ -16,7 +16,6 @@ const SENSOR_MAX_AGE_SECONDS = 60 * 60
  * a look below.
  */
 class TelldusAccessory {
-
   /**
    * Setup data for accessory, and inject everything used by the class.
    *
@@ -48,7 +47,7 @@ class TelldusAccessory {
     // Device log
     this.log = string => log(`[${this.name}]: ${string}`)
     this.Characteristic = homebridge.hap.Characteristic
-    this.Service        = homebridge.hap.Service
+    this.Service = homebridge.hap.Service
   }
 
   /**
@@ -58,9 +57,8 @@ class TelldusAccessory {
    * @returns {boolean}
    */
   isStale(sensor) {
-    const maxAge = this.data.maxAge || this.config.maxAge
-                                    || SENSOR_MAX_AGE_SECONDS
-    return (parseInt(sensor.age) >= parseInt(maxAge))
+    const maxAge = this.data.maxAge || this.config.maxAge || SENSOR_MAX_AGE_SECONDS
+    return parseInt(sensor.age) >= parseInt(maxAge)
   }
 
   /**
@@ -82,7 +80,6 @@ class TelldusAccessory {
  * This is at the moment represented by a Lightbulb controller service.
  */
 class TelldusSwitch extends TelldusAccessory {
-
   /**
    * Return the last known state of the telldus device, which could either
    * be ON or OFF. This is translated to a boolean value, that is returned to
@@ -117,15 +114,18 @@ class TelldusSwitch extends TelldusAccessory {
   setState(value, callback, context) {
     this.log(`Recieved set state request for switch: [${value ? 'on' : 'off'}]`)
 
-    this.tdtool[value ? 'on' : 'off'](this.id).then(out => {
-      return out.indexOf('Success') > -1 ? callback() : Promise.reject(out)
+    this.tdtool[value ? 'on' : 'off'](this.id).then(
+      out => {
+        return out.indexOf('Success') > -1 ? callback() : Promise.reject(out)
 
-      // FIXME: This does not appear to actually be raising an error to
-      //        Homebridge, check out http://goo.gl/RGuILo . Same as below.
-    }, error => callback(new Error(error)))
+        // FIXME: This does not appear to actually be raising an error to
+        //        Homebridge, check out http://goo.gl/RGuILo . Same as below.
+      },
+      error => callback(new Error(error))
+    )
   }
 
-   /**
+  /**
    * Return the supported services by this Accessory. This supports
    * turning the device in and off, and binds the methods for that
    * accordningly.
@@ -136,7 +136,8 @@ class TelldusSwitch extends TelldusAccessory {
     this.log('getServices called')
     const controllerService = new this.Service.Lightbulb(this.name)
 
-    controllerService.getCharacteristic(this.Characteristic.On)
+    controllerService
+      .getCharacteristic(this.Characteristic.On)
       .on('get', this.getState.bind(this))
       .on('set', this.setState.bind(this))
 
@@ -152,8 +153,6 @@ class TelldusSwitch extends TelldusAccessory {
  * for brightness, and the appropriate getters and setters for it.
  */
 class TelldusDimmer extends TelldusSwitch {
-
-
   /**
    * Telldus Dimmer constructor.
    *
@@ -181,7 +180,7 @@ class TelldusDimmer extends TelldusSwitch {
     this.log('getDimLevel called')
 
     this.tdtool.device(this.id).then(device => {
-      if (device.dimlevel){
+      if (device.dimlevel) {
         this.dimlevel = bitsToPercentage(parseInt(device.dimlevel))
       }
       callback(null, this.dimlevel)
@@ -202,15 +201,18 @@ class TelldusDimmer extends TelldusSwitch {
    */
   setState(value, callback, context) {
     this.log(`Recieved set state request for dimmer: [${value ? 'on' : 'off'}]`)
-    if (value && this.dimlevel > 0){
-      this.tdtool.dim(percentageToBits(this.dimlevel), this.id).then(out => {
-        return out.indexOf('Success') > -1 ? callback() : Promise.reject(out)
+    if (value && this.dimlevel > 0) {
+      this.tdtool.dim(percentageToBits(this.dimlevel), this.id).then(
+        out => {
+          return out.indexOf('Success') > -1 ? callback() : Promise.reject(out)
 
-        // FIXME: This does not appear to actually be raising an error to
-        //        Homebridge, check out http://goo.gl/RGuILo . Same as above.
-      }, error => callback(new Error(error)))
+          // FIXME: This does not appear to actually be raising an error to
+          //        Homebridge, check out http://goo.gl/RGuILo . Same as above.
+        },
+        error => callback(new Error(error))
+      )
     } else {
-    // Turn the dimmer of by using the super switch function
+      // Turn the dimmer of by using the super switch function
       super.setState(false, callback, context)
     }
   }
@@ -241,9 +243,10 @@ class TelldusDimmer extends TelldusSwitch {
    * @return {Array} An array of services supported by this accessory.
    */
   getServices() {
-    const controllerService= super.getServices()[0]
+    const controllerService = super.getServices()[0]
 
-    controllerService.getCharacteristic(this.Characteristic.Brightness)
+    controllerService
+      .getCharacteristic(this.Characteristic.Brightness)
       .on('get', this.getDimLevel.bind(this))
       .on('set', this.setDimLevel.bind(this))
 
@@ -257,7 +260,6 @@ class TelldusDimmer extends TelldusSwitch {
  * This is a sensor, and only have the getting possibility of the value.
  */
 class TelldusHygrometer extends TelldusAccessory {
-
   /**
    * Fetches the humidity in the air from the sensor. Accepts a callback
    * method and returns the value to that method.
@@ -269,6 +271,7 @@ class TelldusHygrometer extends TelldusAccessory {
   getHumidity(callback, context) {
     this.log('Checking humidity...')
     this.tdtool.sensor(this.id, this.log).then(s => {
+      this.log(`sensor returned this: ${s}`)
       if (s === undefined) {
         callback(true, null)
       } else {
@@ -288,9 +291,9 @@ class TelldusHygrometer extends TelldusAccessory {
   getServices() {
     const controllerService = new this.Service.HumiditySensor(this.name)
 
-    controllerService.getCharacteristic(
-      this.Characteristic.CurrentRelativeHumidity
-    ) .on('get', this.getHumidity.bind(this))
+    controllerService
+      .getCharacteristic(this.Characteristic.CurrentRelativeHumidity)
+      .on('get', this.getHumidity.bind(this))
 
     return [controllerService]
   }
@@ -302,7 +305,6 @@ class TelldusHygrometer extends TelldusAccessory {
  * This is a sensor, and only have the getting possibility of the value.
  */
 class TelldusThermometer extends TelldusAccessory {
-
   /**
    * Accepts a callback method, and returns the unit of measurement for
    * the temperature. Is currently always set to Celcius.
@@ -311,7 +313,7 @@ class TelldusThermometer extends TelldusAccessory {
     this.log('Getting temperature units')
 
     // 1 = F and 0 = C
-    callback (null, 0)
+    callback(null, 0)
   }
 
   /**
@@ -325,12 +327,12 @@ class TelldusThermometer extends TelldusAccessory {
   getTemperature(callback, context) {
     this.log('Checking temperature...')
     this.tdtool.sensor(this.id, this.log).then(s => {
+      this.log(`sensor returned this: ${s}`)
       if (s === undefined) {
         callback(true, null)
       } else {
         const isStale = this.isStale(s)
-        this.log(`Found temperature ${s.temperature} age ${s.age}s ` +
-                 `stale:${isStale}`)
+        this.log(`Found temperature ${s.temperature} age ${s.age}s ` + `stale:${isStale}`)
         callback(isStale, parseFloat(s.temperature))
       }
     })
@@ -348,11 +350,10 @@ class TelldusThermometer extends TelldusAccessory {
   getServices() {
     const controllerService = new this.Service.TemperatureSensor(this.name)
 
-    controllerService.getCharacteristic(
-      this.Characteristic.CurrentTemperature
-    ).setProps(
-      { minValue: -50 }
-    ).on('get', this.getTemperature.bind(this))
+    controllerService
+      .getCharacteristic(this.Characteristic.CurrentTemperature)
+      .setProps({ minValue: -50 })
+      .on('get', this.getTemperature.bind(this))
 
     return [controllerService]
   }
@@ -366,7 +367,6 @@ class TelldusThermometer extends TelldusAccessory {
  * adds a controller service or the Hygrometer.
  */
 class TelldusThermometerHygrometer extends TelldusThermometer {
-
   /**
    * Return the state of the telldus device, which is done by issuing
    * list-sensors with tdtool.
@@ -398,9 +398,9 @@ class TelldusThermometerHygrometer extends TelldusThermometer {
     const thermoServices = super.getServices(),
       hygroSensor = new this.Service.HumiditySensor(this.name)
 
-    hygroSensor.getCharacteristic(
-      this.Characteristic.CurrentRelativeHumidity
-    ) .on('get', this.getHumidity.bind(this))
+    hygroSensor
+      .getCharacteristic(this.Characteristic.CurrentRelativeHumidity)
+      .on('get', this.getHumidity.bind(this))
 
     return thermoServices.concat([hygroSensor])
   }
@@ -412,5 +412,5 @@ module.exports = {
   TelldusDimmer,
   TelldusHygrometer,
   TelldusThermometer,
-  TelldusThermometerHygrometer,
+  TelldusThermometerHygrometer
 }
