@@ -3,7 +3,7 @@
 const confParser = require('tellstick.conf-parser')
 
 const DEFAULT_CONFIGURATION = {
-  tellstickConfLocation: '/etc/tellstick.conf',
+  tellstickConfLocation: '/etc/tellstick.conf'
 }
 
 const LINE_DELIMETER = '\n'
@@ -11,8 +11,10 @@ const PAIR_DELIMETER = '\t'
 
 const exec = require('child_process').exec
 
-const execute = cmd => new Promise((resolve, reject) => {
-  exec(cmd, (err, stdout, stderr) => err ? reject(stderr) : resolve(stdout))})
+const execute = cmd =>
+  new Promise((resolve, reject) => {
+    exec(cmd, (err, stdout, stderr) => (err ? reject(stderr) : resolve(stdout)))
+  })
 
 /**
  * Accepts a device string, and returns a list of objects.
@@ -34,12 +36,11 @@ const deviceStringToObjects = deviceString =>
     .map(line =>
       line.split(PAIR_DELIMETER).reduce((obj, unparsedPair) => {
         const pair = unparsedPair.split('=')
-        if (pair[0])
-          obj[pair[0]] = pair[0] === 'id' ? parseInt(pair[1]) : pair[1]
+        if (pair[0]) obj[pair[0]] = pair[0] === 'id' ? parseInt(pair[1]) : pair[1]
         return obj
-      }, {}))
+      }, {})
+    )
     .filter(device => !!device.id)
-
 
 /**
  * Wrapper for command line interactions with the CLI tool tdtool,
@@ -55,7 +56,6 @@ const deviceStringToObjects = deviceString =>
  * @type {TDtool}
  */
 class TDtool {
-
   /**
    * TDtool constructor.
    *
@@ -96,8 +96,7 @@ class TDtool {
         this.log('"TDtool" is present on system.')
         Promise.resolve()
       } else {
-        this.log('"tdtool" does not seem to be installed, but is required ' +
-                 'by this plugin.')
+        this.log('"tdtool" does not seem to be installed, but is required ' + 'by this plugin.')
         Promise.reject('Necessary dependency missing')
       }
     })
@@ -122,8 +121,7 @@ class TDtool {
     const tellstickFile = this.config.tellstickConfLocation
     return confParser.parse(tellstickFile).then(conf => {
       this.parsedConfFile = conf
-      this.log(`"${tellstickFile}" lists ` +
-               conf.devices.map(d => `"${d.name}"`).join(', '))
+      this.log(`"${tellstickFile}" lists ` + conf.devices.map(d => `"${d.name}"`).join(', '))
       return conf
     })
   }
@@ -147,13 +145,12 @@ class TDtool {
       // TODO: Validate the resuls from this, and that the correct properties
       // are present.
 
-      this.log('"tdtool --list-devices" lists ' +
-               tdtoolDevices.map(d => `"${d.name}"`).join(', '))
+      this.log('"tdtool --list-devices" lists ' + tdtoolDevices.map(d => `"${d.name}"`).join(', '))
 
       return this._getParsedConfFile().then(conf => {
-        return tdtoolDevices
-          .map(device => Object.assign(
-            conf.devices.find(confDev => confDev.id === device.id), device))
+        return tdtoolDevices.map(device =>
+          Object.assign(conf.devices.find(confDev => confDev.id === device.id), device)
+        )
       })
     })
   }
@@ -169,10 +166,10 @@ class TDtool {
    *                   sensor objects with fields as listed by stdout.
    */
   listSensors() {
+    this.log('listing all sensors')
     return execute('tdtool --list-sensors').then(deviceString => {
       const tdtoolSensors = deviceStringToObjects(deviceString)
-      this.log('"tdtool --list-sensors" lists ' +
-               tdtoolSensors.map(d => `"${d.id}"`).join(', '))
+      this.log('"tdtool --list-sensors" lists ' + tdtoolSensors.map(d => `"${d.id}"`).join(', '))
       return tdtoolSensors
     })
   }
@@ -188,8 +185,7 @@ class TDtool {
    *                      found in the list.
    */
   device(id) {
-    return this.listDevices().then(
-      devices => devices.find(d => d.id === id))
+    return this.listDevices().then(devices => devices.find(d => d.id === id))
   }
 
   /**
@@ -203,8 +199,8 @@ class TDtool {
    *                      found in the list.
    */
   sensor(id) {
-    return this.listSensors().then(
-      sensors => sensors.find(s => s.id === id))
+    this.log(`requesting senson with id: ${id}`)
+    return this.listSensors().then(sensors => sensors.find(s => s.id === id))
   }
 
   /**
@@ -216,7 +212,9 @@ class TDtool {
    *                         response to the invoked command, or the stderr
    *                         output when rejected.
    */
-  run(cmd, target) { return execute(`tdtool ${cmd} ${target}`) }
+  run(cmd, target) {
+    return execute(`tdtool ${cmd} ${target}`)
+  }
 
   /**
    * Shorthand method for invoking an on command on a device.
@@ -226,7 +224,9 @@ class TDtool {
    *                      response to the invoked command, or the stderr
    *                      output when rejected.
    */
-  on(id) { return this.run('--on', id) }
+  on(id) {
+    return this.run('--on', id)
+  }
 
   /**
    * Shorthand method for invoking an off command on a device.
@@ -236,7 +236,9 @@ class TDtool {
    *                       response to the invoked command, or the stderr
    *                       output when rejected.
    */
-  off(id) { return this.run('--off', id) }
+  off(id) {
+    return this.run('--off', id)
+  }
 
   /**
    * Shorthand method for invoking a dim command on a device.
@@ -247,7 +249,9 @@ class TDtool {
    *                         response to the invoked command, or the stderr
    *                         output when rejected.
    */
-  dim(level, id) { return execute(`tdtool --dimlevel ${level} --dim ${id}`) }
+  dim(level, id) {
+    return execute(`tdtool --dimlevel ${level} --dim ${id}`)
+  }
 }
 
 module.exports = { TDtool }
